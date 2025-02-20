@@ -3,6 +3,7 @@ from sqlalchemy import Column, Enum, Integer, String
 from sqlalchemy.orm import relationship
 from app.database import Base
 
+
 class OrderStatus(str, enum.Enum):
     PENDING = "pending"
     CONFIRMED = "confirmed"
