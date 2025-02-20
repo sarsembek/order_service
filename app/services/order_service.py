@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -12,6 +12,8 @@ class OrderService:
         self.repository = repository
         self.db = db
 
+        self.cache: Dict[int, Order] = {}
+
     def create_order(self, order_data: OrderCreateSchema, current_user: User) -> Order:
         new_order = Order(
             customer_name=current_user.username,
@@ -19,7 +21,9 @@ class OrderService:
             total_price=int(order_data.total_price)
             # Note: Product handling omitted for simplicity.
         )
-        return self.repository.create(new_order)
+        created_order = self.repository.create(new_order)
+        self.cache[created_order.order_id] = created_order
+        return created_order
 
     def update_order(self, order_id: int, order_data: OrderCreateSchema, current_user: User) -> Order:
         order = self.repository.get(order_id)
@@ -27,13 +31,15 @@ class OrderService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Order not found"
             )
-
         if not current_user.is_admin and order.customer_name != current_user.username:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this order"
             )
         update_data = order_data.dict()
-        return self.repository.update(order, update_data)
+        updated_order = self.repository.update(order, update_data)
+
+        self.cache[updated_order.order_id] = updated_order
+        return updated_order
 
     def get_orders(
         self, 
@@ -44,6 +50,8 @@ class OrderService:
     ) -> List[Order]:
         orders = self.repository.list_all()
 
+        for order in orders:
+            self.cache[order.order_id] = order
         if not current_user.is_admin:
             orders = [o for o in orders if o.customer_name == current_user.username]
         if status_filter:
@@ -55,7 +63,12 @@ class OrderService:
         return orders
 
     def get_order(self, order_id: int, current_user: User) -> Order:
-        order = self.repository.get(order_id)
+
+        order = self.cache.get(order_id)
+        if not order:
+            order = self.repository.get(order_id)
+            if order:
+                self.cache[order.order_id] = order
         if not order:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Order not found"
@@ -76,4 +89,7 @@ class OrderService:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this order"
             )
-        return self.repository.update(order, {"order_status": OrderStatus.CANCELLED})
+        updated_order = self.repository.update(order, {"order_status": OrderStatus.CANCELLED})
+
+        self.cache[order_id] = updated_order
+        return updated_order
