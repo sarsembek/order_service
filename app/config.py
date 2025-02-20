@@ -1,13 +1,11 @@
-from pydantic_settings import BaseSettings
+import os
+from dotenv import load_dotenv
 
+load_dotenv()  # Load variables from .env
 
-class Settings(BaseSettings):
-    DB_URL: str
-    DB_USER: str
-    DB_PASSWORD: str
-    DB_NAME: str
-
-    class Config:
-        env_file = ".env" 
+class Settings:
+    SECRET_KEY: str = os.getenv("SECRET_KEY")
+    # For SQLite, you might use:
+    DB_URL: str = os.getenv("DB_URL", "sqlite:///./test.db")
 
 settings = Settings()

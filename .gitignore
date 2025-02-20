@@ -1,0 +1,42 @@
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.env
+.env
+
+# Virtual environment
+venv/
+.env/
+.venv/
+env/
+*.venv
+
+# Editor & OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+*.log
+
+# Dependency files
+poetry.lock
+Pipfile
+Pipfile.lock
+
+# Migrations
+alembic/versions/*.pyc
+alembic/versions/*.pyo
+alembic/versions/__pycache__/
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# JWT & security keys
+jwt_key.pem
+jwt_key.pub
+
+# FastAPI-specific
+instance/
