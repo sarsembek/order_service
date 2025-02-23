@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship, Mapped
 from app.database import Base
 
 
@@ -9,3 +10,9 @@ class Product(Base):
     name = Column(String)
     price = Column(Integer)
     quantity = Column(Integer)
+    
+    orders: Mapped[list["Order"]] = relationship(
+        "Order",
+        secondary="order_product_association",
+        back_populates="products"
+    )

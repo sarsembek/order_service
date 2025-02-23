@@ -1,6 +1,8 @@
 import enum
 from sqlalchemy import Column, Enum, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped
+from app.core.models import order_association
+from app.core.models.product import Product
 from app.database import Base
 
 
@@ -16,4 +18,8 @@ class Order(Base):
     customer_name = Column(String)
     order_status = Column(Enum(OrderStatus), default=OrderStatus.PENDING, nullable=False)
     total_price = Column(Integer)
-    products = relationship("Product", secondary="order_products", back_populates="orders")
+    products: Mapped[list["Product"]] = relationship(
+        "Product",
+        secondary="order_product_association",
+        back_populates="orders"
+    )
