@@ -5,22 +5,43 @@ from sqlalchemy.orm import Session
 from app.core.models.order import Order, OrderStatus
 from app.core.schemas.order_schema import OrderCreateSchema
 from app.repositories.order_repository import OrderRepository
+from app.repositories.product_repository import ProductRepository
 from app.core.models.user import User
 
 class OrderService:
     def __init__(self, repository: OrderRepository, db: Session) -> None:
         self.repository = repository
         self.db = db
-
         self.cache: Dict[int, Order] = {}
 
     def create_order(self, order_data: OrderCreateSchema, current_user: User) -> Order:
+        # Use the username from the token for customer_name.
+        total_price = 0
+        product_repo = ProductRepository(self.db)
         new_order = Order(
-            customer_name=current_user.username,
-            order_status=order_data.status,
-            total_price=int(order_data.total_price)
-            # Note: Product handling omitted for simplicity.
+            customer_name=current_user.username,  # Always taken from token
+            order_status=order_data.order_status,
+            total_price=0  # Will be updated below
         )
+        # Iterate over each product in the order creation schema.
+        for prod_data in order_data.products:
+            product = product_repo.get(prod_data.product_id)
+            if not product:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Product with ID '{prod_data.product_id}' not found"
+                )
+            if product.quantity < prod_data.quantity:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Not enough quantity for product with ID '{prod_data.product_id}'. Available: {product.quantity}"
+                )
+            # Deduct the ordered quantity.
+            product.quantity -= prod_data.quantity
+            subtotal = product.price * prod_data.quantity
+            total_price += subtotal
+            new_order.products.append(product)
+        new_order.total_price = total_price
         created_order = self.repository.create(new_order)
         self.cache[created_order.order_id] = created_order
         return created_order

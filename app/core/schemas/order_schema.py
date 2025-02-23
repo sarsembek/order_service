@@ -1,21 +1,24 @@
 from typing import List
 from pydantic import BaseModel
-
 from app.core.models.order import OrderStatus
-from app.core.schemas.product_schema import ProductCreateSchema, ProductSchema
+
+class OrderProductSchema(BaseModel):
+    product_id: int
+    quantity: int
+
+    class Config:
+        from_attributes = True
 
 class OrderSchema(BaseModel):
     order_id: int
     customer_name: str
-    status: OrderStatus
+    order_status: OrderStatus
     total_price: int
-    products: List[ProductSchema]
+    products: List[OrderProductSchema]
 
     class Config:
         from_attributes = True
-        
+
 class OrderCreateSchema(BaseModel):
-    customer_name: str
-    status: OrderStatus = OrderStatus.PENDING
-    total_price: float
-    products: List[ProductCreateSchema]
+    order_status: OrderStatus = OrderStatus.PENDING
+    products: List[OrderProductSchema]
