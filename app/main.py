@@ -11,7 +11,7 @@ from app.core.exceptions.custom_exceptions import (
     ProductNotFoundError,
     UnauthorizedOrderAccessError
 )
-from app.middleware.metrics_middleware import MetricsMiddleware
+from app.utils.metrics_middleware import MetricsMiddleware
 
 # Configure logging
 logging.basicConfig(

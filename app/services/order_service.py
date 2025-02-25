@@ -43,6 +43,9 @@ class OrderService:
         cached = self.redis.get(key)
         return json.loads(cached) if cached else None
 
+    def _log_status_change(self, order_id: int, old_status: OrderStatus, new_status: OrderStatus) -> None:
+        logger.info(f"Order status changed: order_id={order_id}, old_status={old_status}, new_status={new_status}")
+
     def create_order(self, order_data: OrderCreateSchema, current_user: User) -> Order:
         total_price = 0
         product_repo = ProductRepository(self.db)
@@ -84,6 +87,8 @@ class OrderService:
             raise OrderNotFoundError(order_id)
         if not current_user.is_admin and order.customer_name != current_user.username:
             raise UnauthorizedOrderAccessError(order_id)
+        
+        old_status = order.order_status
         update_data = order_data.dict()
         updated_order = self.repository.update(order, update_data)
         self.cache[updated_order.order_id] = updated_order
@@ -91,6 +96,10 @@ class OrderService:
         
         # Log the update action
         logger.info(f"Order updated: {updated_order.order_id} by user: {current_user.username}")
+        
+        # Log the status change if it occurred
+        if old_status != updated_order.order_status:
+            self._log_status_change(updated_order.order_id, old_status, updated_order.order_status)
         
         return updated_order
 
@@ -135,11 +144,16 @@ class OrderService:
             raise OrderNotFoundError(order_id)
         if not current_user.is_admin and order.customer_name != current_user.username:
             raise UnauthorizedOrderAccessError(order_id)
+        
+        old_status = order.order_status
         updated_order = self.repository.update(order, {"order_status": OrderStatus.CANCELLED})
         self.cache[order_id] = updated_order
         self._cache_order(updated_order)
         
         # Log the deletion action
         logger.info(f"Order soft-deleted: {updated_order.order_id} by user: {current_user.username}")
+        
+        # Log the status change
+        self._log_status_change(updated_order.order_id, old_status, updated_order.order_status)
         
         return updated_order
