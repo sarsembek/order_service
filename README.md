@@ -39,9 +39,13 @@ poetry install
 ### 3. Configure environment variables
 Create a `.env` file in the project root and set values for:  
 ```
-DB_URL=postgresql://user:password@localhost:5432/order_db
+DB_USER=order_user
+DB_PASSWORD=order_service2025
+DB_NAME=order_service
+DB_HOST=db
+DB_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}/${DB_NAME}
 SECRET_KEY=your_secret_key
-REDIS_HOST=localhost
+REDIS_HOST=redis
 REDIS_PORT=6379
 ```
 
@@ -49,7 +53,10 @@ REDIS_PORT=6379
 ```sh
 docker-compose up --build
 ```
-
+### 5. Run Alembic migrations
+```sh
+docker-compose exec web alembic upgrade head
+```
 ## Usage
 
 - Access the application at: **[http://localhost:8000](http://localhost:8000)**  
