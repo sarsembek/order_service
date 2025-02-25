@@ -7,6 +7,7 @@ from app.core.schemas.order_schema import OrderCreateSchema
 from app.repositories.order_repository import OrderRepository
 from app.repositories.product_repository import ProductRepository
 from app.core.models.user import User
+from app.core.models.order_association import OrderProductAssociation
 
 class OrderService:
     def __init__(self, repository: OrderRepository, db: Session) -> None:
@@ -15,7 +16,6 @@ class OrderService:
         self.cache: Dict[int, Order] = {}
 
     def create_order(self, order_data: OrderCreateSchema, current_user: User) -> Order:
-        # Use the username from the token for customer_name.
         total_price = 0
         product_repo = ProductRepository(self.db)
         new_order = Order(
@@ -23,7 +23,7 @@ class OrderService:
             order_status=order_data.order_status,
             total_price=0  # Will be updated below
         )
-        # Iterate over each product in the order creation schema.
+
         for prod_data in order_data.products:
             product = product_repo.get(prod_data.product_id)
             if not product:
@@ -36,11 +36,16 @@ class OrderService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Not enough quantity for product with ID '{prod_data.product_id}'. Available: {product.quantity}"
                 )
-            # Deduct the ordered quantity.
+
             product.quantity -= prod_data.quantity
             subtotal = product.price * prod_data.quantity
             total_price += subtotal
-            new_order.products.append(product)
+            
+            association = OrderProductAssociation(
+                product_id=product.product_id,
+                ordered_quantity=prod_data.quantity
+            )
+            new_order.order_associations.append(association)
         new_order.total_price = total_price
         created_order = self.repository.create(new_order)
         self.cache[created_order.order_id] = created_order

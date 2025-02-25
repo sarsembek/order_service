@@ -4,7 +4,7 @@ from app.core.models.order import OrderStatus
 
 class OrderProductSchema(BaseModel):
     product_id: int
-    quantity: int
+    quantity: int 
 
     class Config:
         from_attributes = True
@@ -20,5 +20,4 @@ class OrderSchema(BaseModel):
         from_attributes = True
 
 class OrderCreateSchema(BaseModel):
-    order_status: OrderStatus = OrderStatus.PENDING
     products: List[OrderProductSchema]
