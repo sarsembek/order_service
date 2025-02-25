@@ -35,7 +35,7 @@ class OrderService:
 
     def _cache_order(self, order: Order) -> None:
         key = f"order:{order.order_id}"
-        order_data = OrderSchema.from_orm(order).dict()
+        order_data = OrderSchema.model_validate(order).model_dump()
         self.redis.set(key, json.dumps(order_data))
         
     def _get_cached_order(self, order_id: int) -> Optional[dict]:

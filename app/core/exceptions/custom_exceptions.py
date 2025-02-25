@@ -30,8 +30,8 @@ class DuplicateUsernameError(AuthException):
         self.status_code = 409
 
 class InvalidCredentialsError(AuthException):
-    def __init__(self):
-        super().__init__("Authentication failed")
+    def __init__(self, detail: str = "Authentication failed"):
+        super().__init__(detail)
         self.status_code = 401
 
 class TokenInvalidError(AuthException):

@@ -40,3 +40,6 @@ jwt_key.pub
 
 # FastAPI-specific
 instance/
+
+# Logs
+logs/

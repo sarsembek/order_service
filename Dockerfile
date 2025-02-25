@@ -15,6 +15,9 @@ RUN poetry config virtualenvs.create false && poetry install --no-interaction --
 FROM base AS final
 COPY . .
 
+# Set PYTHONPATH
+ENV PYTHONPATH=/app
+
 # Expose port 8000
 EXPOSE 8000
 
