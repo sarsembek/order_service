@@ -54,7 +54,8 @@ class OrderService:
             )
         if not current_user.is_admin and order.customer_name != current_user.username:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this order"
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to update this order"
             )
         update_data = order_data.dict()
         updated_order = self.repository.update(order, update_data)
