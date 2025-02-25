@@ -1,6 +1,6 @@
 import logging
 import bcrypt
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, APIRouter
 from fastapi.responses import JSONResponse
 
 from app.routers.api import api_router
@@ -28,7 +28,7 @@ if not hasattr(bcrypt, "__about__"):
 
 app = FastAPI()
 metrics_middleware = MetricsMiddleware(app)
-app.add_middleware(MetricsMiddleware)
+app.middleware("http")(metrics_middleware.dispatch)
 
 app.include_router(api_router)
 
