@@ -1,7 +1,6 @@
 import json
 import redis
 from typing import List, Optional, Dict
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -11,6 +10,12 @@ from app.repositories.order_repository import OrderRepository
 from app.repositories.product_repository import ProductRepository
 from app.core.models.user import User
 from app.core.models.order_association import OrderProductAssociation
+from app.core.exceptions import (
+    ProductNotFoundError,
+    InsufficientStockError,
+    UnauthorizedOrderAccessError,
+    OrderNotFoundError
+)
 
 class OrderService:
     def __init__(self, repository: OrderRepository, db: Session) -> None:
@@ -38,25 +43,18 @@ class OrderService:
     def create_order(self, order_data: OrderCreateSchema, current_user: User) -> Order:
         total_price = 0
         product_repo = ProductRepository(self.db)
-        # Set order_status to pending; ignore incoming status field if any.
         new_order = Order(
-            customer_name=current_user.username,  # Always taken from token
+            customer_name=current_user.username,  # always taken from token
             order_status=OrderStatus.PENDING,
-            total_price=0  # Will be updated below
+            total_price=0  # will be updated below
         )
 
         for prod_data in order_data.products:
             product = product_repo.get(prod_data.product_id)
             if not product:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Product with ID '{prod_data.product_id}' not found"
-                )
+                raise ProductNotFoundError(prod_data.product_id)
             if product.quantity < prod_data.quantity:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Not enough quantity for product with ID '{prod_data.product_id}'. Available: {product.quantity}"
-                )
+                raise InsufficientStockError(prod_data.product_id, product.quantity)
 
             product.quantity -= prod_data.quantity
             subtotal = product.price * prod_data.quantity
@@ -76,18 +74,13 @@ class OrderService:
     def update_order(self, order_id: int, order_data: OrderCreateSchema, current_user: User) -> Order:
         order = self.repository.get(order_id)
         if not order:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Order not found"
-            )
+            raise OrderNotFoundError(order_id)
         if not current_user.is_admin and order.customer_name != current_user.username:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to update this order"
-            )
+            raise UnauthorizedOrderAccessError(order_id)
         update_data = order_data.dict()
         updated_order = self.repository.update(order, update_data)
-
         self.cache[updated_order.order_id] = updated_order
+        self._cache_order(updated_order)
         return updated_order
 
     def get_orders(
@@ -112,40 +105,26 @@ class OrderService:
         return orders
 
     def get_order(self, order_id: int, current_user: User) -> Order:
-        # Try to retrieve from Redis cache
         cached = self._get_cached_order(order_id)
         if cached:
-            # Optionally, you can use OrderSchema.parse_obj to validate the structure
-            # and then convert it to your ORM model if needed.
-            # Here we just return the cached dict and assume FastAPI converts it appropriately.
-            # If you prefer to return an ORM instance, fetch from the DB.
             return cached
         
         order = self.repository.get(order_id)
-        if order:
-            self.cache[order.order_id] = order
-            self._cache_order(order)
         if not order:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Order not found"
-            )
+            raise OrderNotFoundError(order_id)
         if not current_user.is_admin and order.customer_name != current_user.username:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this order"
-            )
+            raise UnauthorizedOrderAccessError(order_id)
+        self.cache[order.order_id] = order
+        self._cache_order(order)
         return order
 
     def soft_delete_order(self, order_id: int, current_user: User) -> Order:
         order = self.repository.get(order_id)
         if not order:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Order not found"
-            )
+            raise OrderNotFoundError(order_id)
         if not current_user.is_admin and order.customer_name != current_user.username:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this order"
-            )
+            raise UnauthorizedOrderAccessError(order_id)
         updated_order = self.repository.update(order, {"order_status": OrderStatus.CANCELLED})
-
         self.cache[order_id] = updated_order
+        self._cache_order(updated_order)
         return updated_order

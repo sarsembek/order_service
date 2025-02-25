@@ -3,13 +3,10 @@ if not hasattr(bcrypt, "__about__"):
     bcrypt.__about__ = type("dummy", (), {"__version__": "4.2.1"})
 
 from fastapi import FastAPI
-from app.routers.auth import router as auth_router
-from app.routers.orders import router as orders_router
+from app.routers.api import api_router
 
 app = FastAPI()
-
-app.include_router(auth_router)
-app.include_router(orders_router)
+app.include_router(api_router)
 
 if __name__ == "__main__":
     import uvicorn
