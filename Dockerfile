@@ -1,4 +1,4 @@
-FROM python:3.11-slim AS base
+FROM python:3.13-slim AS base
 WORKDIR /app
 
 # Install system dependencies
@@ -9,7 +9,7 @@ RUN pip install poetry
 
 # Copy dependency files and install dependencies using Poetry without dev packages
 COPY pyproject.toml poetry.lock ./
-RUN poetry config virtualenvs.create false && poetry install --no-dev
+RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
 
 # Build stage: copy the rest of the application
 FROM base AS final
