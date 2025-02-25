@@ -1,33 +1,54 @@
 services:
-   web:
-      build: .
-      ports:
-         - "8000:8000"
-      environment:
-         - SECRET_KEY=${SECRET_KEY}
-         - DB_URL=${DB_URL}
-         - REDIS_HOST=${REDIS_HOST}
-         - REDIS_PORT=${REDIS_PORT}
-      depends_on:
-         - redis
-         - db
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DB_URL=${DB_URL}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
 
-   redis:
-      image: redis:alpine
-      ports:
-         - "6379:6379"
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - app-network
 
-   db:
-      image: postgres:alpine
-      restart: always
-      environment:
-         POSTGRES_USER: ${DB_USER}
-         POSTGRES_PASSWORD: ${DB_PASSWORD}
-         POSTGRES_DB: ${DB_NAME}
-      ports:
-         - "5432:5432"
-      volumes:
-         - db_data:/var/lib/postgresql/data
+  db:
+    image: postgres:alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - app-network
 
 volumes:
-   db_data:
+  db_data:
+
+networks:
+  app-network:
