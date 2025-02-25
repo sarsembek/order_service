@@ -1,14 +1,14 @@
 from pydantic import BaseModel, EmailStr
 
-
 class UserSchema(BaseModel):
     user_id: int
     username: str
     email: EmailStr
     is_admin: bool
     
-    class Config:
-        from_attributes = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class UserCreateSchema(BaseModel):
     username: str

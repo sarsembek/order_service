@@ -6,8 +6,9 @@ class OrderProductSchema(BaseModel):
     product_id: int
     quantity: int 
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class OrderSchema(BaseModel):
     order_id: int
@@ -16,8 +17,9 @@ class OrderSchema(BaseModel):
     total_price: int
     products: List[OrderProductSchema]
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class OrderCreateSchema(BaseModel):
     products: List[OrderProductSchema]
