@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+   web:
+      build: .
+      ports:
+         - "8000:8000"
+      environment:
+         - SECRET_KEY=${SECRET_KEY}
+         - DB_URL=${DB_URL}
+         - REDIS_HOST=${REDIS_HOST}
+         - REDIS_PORT=${REDIS_PORT}
+      depends_on:
+         - redis
+         - db
+
+   redis:
+      image: redis:alpine
+      ports:
+         - "6379:6379"
+
+   db:
+      image: postgres:alpine
+      restart: always
+      environment:
+         POSTGRES_USER: ${DB_USER}
+         POSTGRES_PASSWORD: ${DB_PASSWORD}
+         POSTGRES_DB: ${DB_NAME}
+      ports:
+         - "5432:5432"
+      volumes:
+         - db_data:/var/lib/postgresql/data
+
+volumes:
+   db_data:
