@@ -1,5 +1,6 @@
 import json
 import redis
+import logging
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 
@@ -16,6 +17,8 @@ from app.core.exceptions import (
     UnauthorizedOrderAccessError,
     OrderNotFoundError
 )
+
+logger = logging.getLogger(__name__)
 
 class OrderService:
     def __init__(self, repository: OrderRepository, db: Session) -> None:
@@ -69,6 +72,10 @@ class OrderService:
         created_order = self.repository.create(new_order)
         self.cache[created_order.order_id] = created_order
         self._cache_order(created_order)
+        
+        # Log the creation action
+        logger.info(f"Order created: {created_order.order_id} by user: {current_user.username}")
+        
         return created_order
 
     def update_order(self, order_id: int, order_data: OrderCreateSchema, current_user: User) -> Order:
@@ -81,6 +88,10 @@ class OrderService:
         updated_order = self.repository.update(order, update_data)
         self.cache[updated_order.order_id] = updated_order
         self._cache_order(updated_order)
+        
+        # Log the update action
+        logger.info(f"Order updated: {updated_order.order_id} by user: {current_user.username}")
+        
         return updated_order
 
     def get_orders(
@@ -127,4 +138,8 @@ class OrderService:
         updated_order = self.repository.update(order, {"order_status": OrderStatus.CANCELLED})
         self.cache[order_id] = updated_order
         self._cache_order(updated_order)
+        
+        # Log the deletion action
+        logger.info(f"Order soft-deleted: {updated_order.order_id} by user: {current_user.username}")
+        
         return updated_order

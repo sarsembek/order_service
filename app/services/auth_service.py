@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
@@ -15,6 +16,8 @@ from app.utils.auth_utils import (
 )
 from app.core.exceptions.custom_exceptions import DuplicateUsernameError, InvalidCredentialsError, TokenExpiredError, TokenInvalidError
 
+logger = logging.getLogger(__name__)
+
 class AuthService:
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -29,17 +32,27 @@ class AuthService:
             email=user_data.email,
             hashed_password=hashed_password
         )
-        return self.user_repo.create(new_user)
+        created_user = self.user_repo.create(new_user)
+        
+        # Log the registration action
+        logger.info(f"User registered: {created_user.username}")
+        
+        return created_user
 
     def login(self, login_data: LoginSchema) -> dict:
         user = self.user_repo.get_by_username(login_data.username)
         if not user or not verify_password(login_data.password, user.hashed_password):
             raise InvalidCredentialsError("Incorrect username or password")
+        
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             data={"sub": user.username, "user_id": user.user_id},
             expires_delta=access_token_expires
         )
+        
+        # Log the login action
+        logger.info(f"User logged in: {user.username}")
+        
         return {"access_token": access_token, "token_type": "bearer"}
 
     def refresh(self, token: str) -> dict:
@@ -58,4 +71,8 @@ class AuthService:
             data={"sub": username},
             expires_delta=access_token_expires
         )
+        
+        # Log the token refresh action
+        logger.info(f"Token refreshed for user: {username}")
+        
         return {"access_token": new_token, "token_type": "bearer"}

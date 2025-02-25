@@ -1,13 +1,29 @@
+import logging
 import bcrypt
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
-from fastapi import status
 
-from app.core.exceptions.custom_exceptions import AuthException, InsufficientStockError, OrderNotFoundError, ProductNotFoundError, UnauthorizedOrderAccessError
+from app.routers.api import api_router
+from app.core.exceptions.custom_exceptions import (
+    AuthException,
+    InsufficientStockError,
+    OrderNotFoundError,
+    ProductNotFoundError,
+    UnauthorizedOrderAccessError
+)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('logs/app.log')
+    ]
+)
+
 if not hasattr(bcrypt, "__about__"):
     bcrypt.__about__ = type("dummy", (), {"__version__": "4.2.1"})
-
-from fastapi import FastAPI, Request
-from app.routers.api import api_router
 
 app = FastAPI()
 app.include_router(api_router)
@@ -69,7 +85,7 @@ async def order_not_found_handler(request: Request, exc: OrderNotFoundError):
             "error_type": "OrderNotFoundError"
         }
     )
-    
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
