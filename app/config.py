@@ -1,11 +1,11 @@
-import os
-from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-load_dotenv()  # Load variables from .env
+class Settings(BaseSettings):
+    SECRET_KEY: str
+    DB_URL: str = "sqlite:///./test.db"
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
 
-class Settings:
-    SECRET_KEY: str = os.getenv("SECRET_KEY")
-    # For SQLite, you might use:
-    DB_URL: str = os.getenv("DB_URL", "sqlite:///./test.db")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 settings = Settings()
