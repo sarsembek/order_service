@@ -11,6 +11,7 @@ from app.core.exceptions.custom_exceptions import (
     ProductNotFoundError,
     UnauthorizedOrderAccessError
 )
+from app.middleware.metrics_middleware import MetricsMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -26,7 +27,14 @@ if not hasattr(bcrypt, "__about__"):
     bcrypt.__about__ = type("dummy", (), {"__version__": "4.2.1"})
 
 app = FastAPI()
+metrics_middleware = MetricsMiddleware(app)
+app.add_middleware(MetricsMiddleware)
+
 app.include_router(api_router)
+
+@app.get("/metrics")
+async def get_metrics():
+    return metrics_middleware.get_metrics()
 
 @app.exception_handler(AuthException)
 async def auth_exception_handler(request: Request, exc: AuthException):
